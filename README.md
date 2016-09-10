@@ -23,6 +23,8 @@ Waiting for I/O completion
 
 select同时监控多个sockets、文件、管道,直到它们变成可读可写或发生通讯错误
 
+**在windows下select无法处理IO流，只能处理socket**
+
 select(rlist, wlist, xlist[, timeout])
 
 rlist: wait until ready for reading；
