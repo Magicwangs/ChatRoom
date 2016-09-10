@@ -25,25 +25,23 @@ select同时监控多个sockets、文件、管道,直到它们变成可读可写
 
 **在windows下select无法处理IO流，只能处理socket**
 
-select(rlist, wlist, xlist[, timeout])
+`select(rlist, wlist, xlist[, timeout])`
 
-rlist: wait until ready for reading；
+`rlist`: wait until ready for reading；
 
-wlist: wait until ready for writing；
+`wlist`: wait until ready for writing；
 
-xlist:wait for an “exceptional condition”--ERROR
+`xlist`:wait for an “exceptional condition”--ERROR
 
-select()
+`select()`返回的3个列表也和输入类似：readable，writable，exceptional。
 
-返回的3个列表和输入类似：readable，writable，exceptional。
+`readable`有3种可能：对于用来侦听连接主服务器socket，表示已准备好接受一个到来的连接；对于已经建立并发送数据的链接，表示有数据到来；如果没数据到来，表示链接已经关闭。
 
-readable有3种可能：对于用来侦听连接主服务器socket，表示已准备好接受一个到来的连接；对于已经建立并发送数据的链接，表示有数据到来；如果没数据到来，表示链接已经关闭。
+`writable`的情况：连接队列中有数据，发送下一条消息。如果队列中无数据，则从output队列中删除。
 
-writable的情况：连接队列中有数据，发送下一条消息。如果队列中无数据，则从output队列中删除。
+`exceptional`:socket有错误，也要从output队列中删除。
 
-socket有错误，也要从output队列中删除。
-
-Select的第四个参数可以设置超时。超时时，select()返回3个空列表。
+Select的第四个参数可以设置超时。超时时，`select()`返回3个空列表。
 
 [select — Waiting for I/O completion](http://python.usyiyi.cn/translate/python_278/library/index.html)
 
