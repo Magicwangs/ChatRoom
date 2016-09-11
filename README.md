@@ -47,7 +47,12 @@ Select的第四个参数可以设置超时。超时时，`select()`返回3个空
 
 [python模块介绍- select 等待I/0完成](http://my.oschina.net/u/1433482/blog/191211)
 
+## About Struct in Python
+[Python学习——struct模块的pack、unpack示例](http://blog.csdn.net/sunboy_2050/article/details/5974029)
+
 ## Reference
 [用Python实现聊天室的一些感想](http://tonnie17.github.io/2015/12/11/chatroom/)
 
 [Python Socket 编程——聊天室示例程序](http://www.cnblogs.com/hazir/p/python_chat_room.html)
+
+[Python使用socket传输文件](http://blog.csdn.net/thare_lam/article/details/49506565)
