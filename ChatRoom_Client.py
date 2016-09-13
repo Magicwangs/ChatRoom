@@ -13,7 +13,7 @@ import os
 import re
 import hashlib
 import struct
-
+import time
 
 
 def checkfile(filename):
@@ -40,6 +40,7 @@ def sendfile(client_socket,filename):
     HEAD_STRUCT='128sIq32s'
     file_size=os.path.getsize(filename)
     filename_size=len(filename)
+    packet_Num=0
     #MD5加密
     md5_hex=MD5Cal(filename)
     with open(filename,'rb') as fr:
@@ -53,16 +54,22 @@ def sendfile(client_socket,filename):
             while(send_size<file_size):
                 if((file_size-send_size)<SEND_BUFFER):
                     file_data=fr.read(file_size-send_size)
+                    packet_Num=packet_Num+1
+                    print 'packet_Num is %d',packet_Num
                     send_size=file_size
                 else:
                     file_data=fr.read(SEND_BUFFER)
                     send_size+=SEND_BUFFER
+                    packet_Num=packet_Num+1
+                    time.sleep(0.08)
                 client_socket.send(file_data)
             client_socket.send("<file>over")
             print "Send Success!"
         except:
             traceback.print_exc()
             sys.exit()
+    global sendfile_flag
+    sendfile_flag=0
             
 def recv_data(client_socket,RECV_BUFFER):
     while 1:
@@ -82,21 +89,31 @@ def recv_data(client_socket,RECV_BUFFER):
 
                 
 def send_data(client_socket):
+    global sendfile_flag
     while 1:
         msg=raw_input()
         infile=re.findall(r'<file>-(.*?)-',msg,re.I)
         if msg=='<exit>':
-            print "你将要下线！"
-            client_socket.send(msg)
-            sys.exit(0)
+            if sendfile_flag:
+                print "正在传输数据，请勿关闭"
+            else:
+                print "你将要下线！"
+                client_socket.send(msg)
+                sys.exit(0)
         elif len(infile):
-            if checkfile(infile[0]):
-                sendfile(client_socket,infile[0])
+            if sendfile_flag:
+                print "正在传输数据，请等待传输结束"
+            else: 
+                if checkfile(infile[0]):
+                    thread.start_new_thread(sendfile,(client_socket,infile[0]))  
+                    sendfile_flag=1
         else:        
             print '<你>说：{}'.format(msg)
-            client_socket.send(msg)
-    
-            
+            if sendfile_flag:
+                newmsg='<text>'+msg
+                client_socket.send(newmsg)
+            else:
+                client_socket.send(msg)
 
 if __name__=="__main__":
 #    if(len(sys.argv)<3):
@@ -104,7 +121,8 @@ if __name__=="__main__":
 #        sys.exit()
 #    host=sys.argv[1]
 #    port=int(sys.argv[2])
-
+    global sendfile_flag
+    sendfile_flag=0
     host='127.0.0.1'
     port=7000
     RECV_BUFFER=4096

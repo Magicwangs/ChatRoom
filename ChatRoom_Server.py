@@ -8,7 +8,7 @@ import socket
 import select
 import sys
 import traceback
-import thread
+import threading
 import struct
 import hashlib
 
@@ -26,7 +26,7 @@ def broadcast_data(sock,message,server_socket,CONNECTION_LIST):
                 CONNECTION_LIST.remove(s)
 
 def MD5Check(filename,md5hex):
-    with open('1.jpg','rb') as fr:
+    with open(filename,'rb') as fr:
         md5_cal=hashlib.md5()
         #处理大文件，内存不够时
         while 1:
@@ -38,6 +38,7 @@ def MD5Check(filename,md5hex):
             print "MD5 Check OK"
         else:
             print "MD5 Check ERROR"
+
 
 #close client
 def close_client_socket(sock,server_socket,CONNECTION_LIST):
@@ -51,20 +52,61 @@ def close_client_socket(sock,server_socket,CONNECTION_LIST):
     sock.close()
     CONNECTION_LIST.remove(s)
 
-def write_data(file_name,recv_size,file_size,RECV_BUFFER,sock,file_sock,first_flag,md5_recv):
-    with open('1.jpg','wb') as fw:
+def check_data(sock,server_socket,msg,CONNECTION_LIST,RECV_BUFFER):
+    check_id=msg[:6]
+    data=msg[6:]
+    if check_id=='<text>':
+        try:
+            if data:
+                clienthost, clientport = sock.getpeername()
+                thismsg='<{}:{}>说:{}'.format(clienthost, clientport, data)
+                broadcast_data(sock,thismsg,server_socket,CONNECTION_LIST)
+        except:
+            traceback.print_exc()
+            close_client_socket(sock,server_socket,CONNECTION_LIST)
+        
+        data=''
+        return data,0
+    else:
+        global recv_size
+        recv_size+=RECV_BUFFER
+        return msg[:],1
+
+def write_data(file_name,file_size,RECV_BUFFER,sock,md5_recv,server_socket,CONNECTION_LIST):
+    global file_sock,first_flag,recv_size
+    packet_Num=0    
+    with open(file_name,'wb') as fw:
         while(recv_size<file_size):
             if((file_size-recv_size)<RECV_BUFFER):
                 file_data=sock.recv(file_size-recv_size)
+                file_data,write_flag=check_data(sock,server_socket,file_data,CONNECTION_LIST,RECV_BUFFER)
                 recv_size=file_size
+                packet_Num+=1
+                print 'packet_Num is %d',packet_Num
             else:
                 print '#'
+                packet_Num+=1
+                print 'packet_Num is %d',packet_Num
                 file_data=sock.recv(RECV_BUFFER)
-                recv_size+=RECV_BUFFER
-            fw.write(file_data)
+                file_data,write_flag=check_data(sock,server_socket,file_data,CONNECTION_LIST,RECV_BUFFER)
+            if write_flag:
+                fw.write(file_data)
             
-
+    data=sock.recv(RECV_BUFFER)
+    if data=='<file>over':
+        print "file transfrom over"
+        file_sock=None
+        first_flag=1
+        recv_size=0
+        MD5Check(file_name,md5_recv)
+    
 if __name__=="__main__":
+    ###全局变量###    
+    global file_sock,first_flag,recv_size
+    file_sock=socket.socket()
+    first_flag=1
+    recv_size=0
+    ###
     ADDRESS=('127.0.0.1',7000)
     RECV_BUFFER=4096
     CONNECTION_LIST=[]
@@ -82,11 +124,10 @@ if __name__=="__main__":
         sys.exit()
     #add server_socket
     CONNECTION_LIST.append(server_socket)    
-    file_sock=socket.socket()
-    first_flag=1
+    
     HEAD_STRUCT='128sIq32s' 
     info_struct = struct.calcsize(HEAD_STRUCT)
-    recv_size=0
+    
     #多客户端聊天，不能采用堵塞的accept(),可以通过select轮询
     while 1:
         #r_sockets中有两种情况：
@@ -109,17 +150,12 @@ if __name__=="__main__":
                     file_info=s.recv(info_struct)
                     file_name2,filename_size,file_size,md5_recv=struct.unpack(HEAD_STRUCT, file_info)
                     file_name=file_name2[:filename_size]
+                    file_name='recv'+'\\'+file_name
                     first_flag=0
                     print "file transfrom start"
-                else:
-                    write_data(file_name,recv_size,file_size,RECV_BUFFER,s,file_sock,first_flag,md5_recv)
-                    data=s.recv(RECV_BUFFER)
-                    if data=='<file>over':
-                        print "file transfrom over"
-                        file_sock=None
-                        first_flag=1
-                        recv_size=0
-                        MD5Check(file_name,md5_recv)
+                    thread_recv=threading.Thread(target=write_data,args=(file_name,file_size,RECV_BUFFER,s,md5_recv,server_socket,CONNECTION_LIST))
+                    thread_recv.start()
+                    
             #如果聊天列表中的客户端socket可读，则把socket中的数据取出（即发言记录）分发给连接列表中的其它客户端socket
             else:
                 try:
