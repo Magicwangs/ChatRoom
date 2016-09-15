@@ -11,6 +11,7 @@ import traceback
 import threading
 import struct
 import hashlib
+import time
 
 #broadcast chat messages
 def broadcast_data(sock,message,server_socket,CONNECTION_LIST):
@@ -64,7 +65,6 @@ def check_data(sock,server_socket,msg,CONNECTION_LIST,RECV_BUFFER):
         except:
             traceback.print_exc()
             close_client_socket(sock,server_socket,CONNECTION_LIST)
-        
         data=''
         return data,0
     else:
@@ -83,15 +83,16 @@ def write_data(file_name,file_size,RECV_BUFFER,sock,md5_recv,server_socket,CONNE
                 recv_size=file_size
                 packet_Num+=1
                 print 'packet_Num is %d',packet_Num
+                print 'OVER'
             else:
                 print '#'
                 packet_Num+=1
                 print 'packet_Num is %d',packet_Num
                 file_data=sock.recv(RECV_BUFFER)
                 file_data,write_flag=check_data(sock,server_socket,file_data,CONNECTION_LIST,RECV_BUFFER)
+#                time.sleep(0.001)
             if write_flag:
                 fw.write(file_data)
-            
     data=sock.recv(RECV_BUFFER)
     if data=='<file>over':
         print "file transfrom over"

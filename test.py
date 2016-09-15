@@ -6,6 +6,7 @@ Created on Tue Sep 13 19:47:35 2016
 """
 import threading
 import time
+import datetime
 
 a=3
 
@@ -26,5 +27,10 @@ if __name__=="__main__":
 #    thread1.start()
 #    while 1:
 #        pass
-    with open('ss.jpg','wb') as fw:
-        fw.write('')
+#    with open('ss.jpg','wb') as fw:
+#        fw.write('')
+
+
+    for i in range(100):
+        print datetime.datetime.now()
+        time.sleep(0.00001)

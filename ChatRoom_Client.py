@@ -14,7 +14,8 @@ import re
 import hashlib
 import struct
 import time
-
+import datetime
+import select
 
 def checkfile(filename):
     if not os.path.exists(filename):
@@ -51,18 +52,27 @@ def sendfile(client_socket,filename):
             send_size=0
             SEND_BUFFER=4096
             print "Sending data..."
+            print datetime.datetime.now()
             while(send_size<file_size):
                 if((file_size-send_size)<SEND_BUFFER):
                     file_data=fr.read(file_size-send_size)
                     packet_Num=packet_Num+1
-                    print 'packet_Num is %d',packet_Num
+                    print 'packet_Num is',packet_Num
                     send_size=file_size
                 else:
                     file_data=fr.read(SEND_BUFFER)
                     send_size+=SEND_BUFFER
                     packet_Num=packet_Num+1
-                    time.sleep(0.08)
-                client_socket.send(file_data)
+#                    time.sleep(0.001)
+#                    time.sleep(0.001)
+#                    while not client_socket.send('<####>'):
+#                        pass
+                wlist=[client_socket]
+                r_sockets,w_sockets,e_sockets=select.select([],wlist,[])
+                for s in w_sockets:
+                    s.send(file_data)
+#                client_socket.send(file_data)
+            print datetime.datetime.now()
             client_socket.send("<file>over")
             print "Send Success!"
         except:
