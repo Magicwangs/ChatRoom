@@ -8,7 +8,7 @@ import select
 import socket
 import sys
 import traceback
-import thread
+import threading
 import os
 import re
 import hashlib
@@ -37,18 +37,19 @@ def MD5Cal(filename):
     print "Calculating success"
     return md5_code.hexdigest()
 
-def sendfile(client_socket,filename):
+def sendfile(file_socket,filename):
     HEAD_STRUCT='128sIq32s'
     file_size=os.path.getsize(filename)
     filename_size=len(filename)
     packet_Num=0
+    wlist=[file_socket]
     #MD5加密
     md5_hex=MD5Cal(filename)
     with open(filename,'rb') as fr:
         file_head=struct.pack(HEAD_STRUCT,filename,filename_size,file_size,md5_hex)
         try:
-            client_socket.send("<file>start")
-            client_socket.send(file_head)
+            file_socket.send("<file>start")
+            file_socket.send(file_head)
             send_size=0
             SEND_BUFFER=4096
             print "Sending data..."
@@ -63,18 +64,16 @@ def sendfile(client_socket,filename):
                     file_data=fr.read(SEND_BUFFER)
                     send_size+=SEND_BUFFER
                     packet_Num=packet_Num+1
-#                    time.sleep(0.001)
-#                    time.sleep(0.001)
-#                    while not client_socket.send('<####>'):
-#                        pass
-                wlist=[client_socket]
+                    time.sleep(0.001)
                 r_sockets,w_sockets,e_sockets=select.select([],wlist,[])
                 for s in w_sockets:
                     s.send(file_data)
 #                client_socket.send(file_data)
             print datetime.datetime.now()
-            client_socket.send("<file>over")
+            time.sleep(0.5)
+            s.send("<file>over")
             print "Send Success!"
+            sys.stdout.flush()
         except:
             traceback.print_exc()
             sys.exit()
@@ -98,7 +97,7 @@ def recv_data(client_socket,RECV_BUFFER):
                     print data
 
                 
-def send_data(client_socket):
+def send_data(client_socket,address):
     global sendfile_flag
     while 1:
         msg=raw_input()
@@ -115,12 +114,15 @@ def send_data(client_socket):
                 print "正在传输数据，请等待传输结束"
             else: 
                 if checkfile(infile[0]):
-                    thread.start_new_thread(sendfile,(client_socket,infile[0]))  
+                    file_socket=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+                    file_socket.settimeout(2)
+                    file_socket.connect(address)
+                    threading.Thread(target=sendfile,args=(file_socket,infile[0])).start()
                     sendfile_flag=1
         else:        
             print '<你>说：{}'.format(msg)
             if sendfile_flag:
-                newmsg='<text>'+msg
+                newmsg=msg
                 client_socket.send(newmsg)
             else:
                 client_socket.send(msg)
@@ -136,7 +138,6 @@ if __name__=="__main__":
     host='127.0.0.1'
     port=7000
     RECV_BUFFER=4096
-
     try:
         client_socket=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
         client_socket.settimeout(2)
@@ -144,10 +145,10 @@ if __name__=="__main__":
     except:
         traceback.print_exc()
         sys.exit()
-    print 'Connected to remote host. Start sending messages'
+    print '\nConnected to remote host. Start sending messages'
     try:
-        thread.start_new_thread(recv_data,(client_socket,RECV_BUFFER))
-        thread.start_new_thread(send_data,(client_socket,))
+        threading.Thread(target=recv_data,args=(client_socket,RECV_BUFFER)).start()
+        threading.Thread(target=send_data,args=(client_socket,(host,port))).start()
     except:
         traceback.print_exc()
         sys.exit()

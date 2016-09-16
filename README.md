@@ -23,6 +23,8 @@ Waiting for I/O completion
 
 select同时监控多个sockets、文件、管道,直到它们变成可读可写或发生通讯错误
 
+**`select`是一个非阻塞的过程，而`recv`和`send`是一个阻塞的过程**
+
 **在windows下select无法处理IO流，只能处理socket**
 
 `select(rlist, wlist, xlist[, timeout])`

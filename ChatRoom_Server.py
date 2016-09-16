@@ -61,7 +61,7 @@ def check_data(sock,server_socket,msg,CONNECTION_LIST,RECV_BUFFER):
             if data:
                 clienthost, clientport = sock.getpeername()
                 thismsg='<{}:{}>说:{}'.format(clienthost, clientport, data)
-                broadcast_data(sock,thismsg,server_socket,CONNECTION_LIST)
+                threading.Thread(target=broadcast_data,args=(sock,thismsg,server_socket,CONNECTION_LIST)).start()
         except:
             traceback.print_exc()
             close_client_socket(sock,server_socket,CONNECTION_LIST)
@@ -74,32 +74,38 @@ def check_data(sock,server_socket,msg,CONNECTION_LIST,RECV_BUFFER):
 
 def write_data(file_name,file_size,RECV_BUFFER,sock,md5_recv,server_socket,CONNECTION_LIST):
     global file_sock,first_flag,recv_size
-    packet_Num=0    
+    recv_size=0
+    packet_Num=0
     with open(file_name,'wb') as fw:
         while(recv_size<file_size):
             if((file_size-recv_size)<RECV_BUFFER):
                 file_data=sock.recv(file_size-recv_size)
-                file_data,write_flag=check_data(sock,server_socket,file_data,CONNECTION_LIST,RECV_BUFFER)
+                print file_size-recv_size
+#                file_data,write_flag=check_data(sock,server_socket,file_data,CONNECTION_LIST,RECV_BUFFER)
                 recv_size=file_size
                 packet_Num+=1
-                print 'packet_Num is %d',packet_Num
-                print 'OVER'
+                print 'packet_Num is',packet_Num
             else:
-                print '#'
                 packet_Num+=1
-                print 'packet_Num is %d',packet_Num
                 file_data=sock.recv(RECV_BUFFER)
-                file_data,write_flag=check_data(sock,server_socket,file_data,CONNECTION_LIST,RECV_BUFFER)
+                recv_size+=RECV_BUFFER
+#                file_data,write_flag=check_data(sock,server_socket,file_data,CONNECTION_LIST,RECV_BUFFER)
 #                time.sleep(0.001)
-            if write_flag:
-                fw.write(file_data)
-    data=sock.recv(RECV_BUFFER)
+#            if write_flag:
+            fw.write(file_data)
+    rlist=[sock]
+    r_sockets,w_sockets,e_sockets=select.select(rlist,[],[])
+    for s in r_sockets:
+        data=s.recv(RECV_BUFFER)
+    print 'OVER'
+    print data[:10]
     if data=='<file>over':
         print "file transfrom over"
         file_sock=None
         first_flag=1
         recv_size=0
         MD5Check(file_name,md5_recv)
+
     
 if __name__=="__main__":
     ###全局变量###    
@@ -153,9 +159,9 @@ if __name__=="__main__":
                     file_name=file_name2[:filename_size]
                     file_name='recv'+'\\'+file_name
                     first_flag=0
+                    CONNECTION_LIST.remove(file_sock)
                     print "file transfrom start"
-                    thread_recv=threading.Thread(target=write_data,args=(file_name,file_size,RECV_BUFFER,s,md5_recv,server_socket,CONNECTION_LIST))
-                    thread_recv.start()
+                    threading.Thread(target=write_data,args=(file_name,file_size,RECV_BUFFER,s,md5_recv,server_socket,CONNECTION_LIST)).start()
                     
             #如果聊天列表中的客户端socket可读，则把socket中的数据取出（即发言记录）分发给连接列表中的其它客户端socket
             else:
