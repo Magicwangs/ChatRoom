@@ -59,6 +59,8 @@ Select的第四个参数可以设置超时。超时时，`select()`返回3个空
 动态调节速度？
 类似TCP的连接？
 
+**socket 一旦设置了timeout, 就进入了 non-blocking 工作模式**
+
 最终采用`select`的方案解决！！
 
 ## 边聊天边发送文件

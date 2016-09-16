@@ -42,7 +42,8 @@ def sendfile(file_socket,filename):
     file_size=os.path.getsize(filename)
     filename_size=len(filename)
     packet_Num=0
-    wlist=[file_socket]
+#    file_socket.setblocking(1) 
+    wlist=[file_socket,]
     #MD5加密
     md5_hex=MD5Cal(filename)
     with open(filename,'rb') as fr:
@@ -59,19 +60,21 @@ def sendfile(file_socket,filename):
                     file_data=fr.read(file_size-send_size)
                     packet_Num=packet_Num+1
                     print 'packet_Num is',packet_Num
+                    sys.stdout.flush()
                     send_size=file_size
                 else:
                     file_data=fr.read(SEND_BUFFER)
-                    send_size+=SEND_BUFFER
-                    packet_Num=packet_Num+1
-                    time.sleep(0.001)
+                    send_size+=SEND_BUFFER  
+#                    time.sleep(0.001)
                 r_sockets,w_sockets,e_sockets=select.select([],wlist,[])
                 for s in w_sockets:
                     s.send(file_data)
+                    packet_Num=packet_Num+1
 #                client_socket.send(file_data)
             print datetime.datetime.now()
-            time.sleep(0.5)
-            s.send("<file>over")
+            sys.stdout.flush()
+#            time.sleep(0.01)
+            file_socket.send("<file>over")
             print "Send Success!"
             sys.stdout.flush()
         except:
@@ -83,7 +86,7 @@ def sendfile(file_socket,filename):
 def recv_data(client_socket,RECV_BUFFER):
     while 1:
         #select在windows下不能监听stdin,只能采用多线程
-        rlist=[client_socket]
+        rlist=[client_socket,]
         r_sockets,w_sockets,e_sockets=select.select(rlist,[],[])
         for s in r_sockets:
             #客户端socket可读，表示有数据可接收，或者断开连接了
@@ -115,7 +118,8 @@ def send_data(client_socket,address):
             else: 
                 if checkfile(infile[0]):
                     file_socket=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-                    file_socket.settimeout(2)
+                    ##socket 一旦设置了timeout, 就进入了 non-blocking 工作模式
+#                    file_socket.settimeout(2)   
                     file_socket.connect(address)
                     threading.Thread(target=sendfile,args=(file_socket,infile[0])).start()
                     sendfile_flag=1
@@ -140,7 +144,7 @@ if __name__=="__main__":
     RECV_BUFFER=4096
     try:
         client_socket=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-        client_socket.settimeout(2)
+#        client_socket.settimeout(2)
         client_socket.connect((host,port))
     except:
         traceback.print_exc()

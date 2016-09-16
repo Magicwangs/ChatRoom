@@ -12,6 +12,7 @@ import threading
 import struct
 import hashlib
 import time
+import datetime
 
 #broadcast chat messages
 def broadcast_data(sock,message,server_socket,CONNECTION_LIST):
@@ -76,11 +77,13 @@ def write_data(file_name,file_size,RECV_BUFFER,sock,md5_recv,server_socket,CONNE
     global file_sock,first_flag,recv_size
     recv_size=0
     packet_Num=0
+    print datetime.datetime.now()
     with open(file_name,'wb') as fw:
         while(recv_size<file_size):
             if((file_size-recv_size)<RECV_BUFFER):
                 file_data=sock.recv(file_size-recv_size)
                 print file_size-recv_size
+                sys.stdout.flush()
 #                file_data,write_flag=check_data(sock,server_socket,file_data,CONNECTION_LIST,RECV_BUFFER)
                 recv_size=file_size
                 packet_Num+=1
@@ -90,22 +93,25 @@ def write_data(file_name,file_size,RECV_BUFFER,sock,md5_recv,server_socket,CONNE
                 file_data=sock.recv(RECV_BUFFER)
                 recv_size+=RECV_BUFFER
 #                file_data,write_flag=check_data(sock,server_socket,file_data,CONNECTION_LIST,RECV_BUFFER)
-#                time.sleep(0.001)
+                time.sleep(0.001)
 #            if write_flag:
             fw.write(file_data)
-    rlist=[sock]
-    r_sockets,w_sockets,e_sockets=select.select(rlist,[],[])
-    for s in r_sockets:
+    print datetime.datetime.now()
+    rlist=[sock,]
+    r_socket,w_sockets,e_sockets=select.select(rlist,[],[])
+    for s in r_socket:
         data=s.recv(RECV_BUFFER)
-    print 'OVER'
-    print data[:10]
+#    print 'OVER'
+#    print data[:10]
+    sys.stdout.flush()
     if data=='<file>over':
         print "file transfrom over"
-        file_sock=None
+#        file_sock=None
         first_flag=1
         recv_size=0
         MD5Check(file_name,md5_recv)
-
+        file_sock.close()
+        
     
 if __name__=="__main__":
     ###全局变量###    
